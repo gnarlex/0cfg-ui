@@ -25,9 +25,9 @@
     "micromatch": "^4.0.2"
   },
   "devDependencies": {
-    "puppeteer": "5.5.0",
+    "@types/micromatch": "^4.0.1",
     "jest-puppeteer": "4.4.0",
-    "@types/micromatch": "^4.0.1"
+    "puppeteer": "5.5.0"
   },
   "gitHead": "a97dc31a2c8532761c234ee1ccbf74cf4c30aeff",
   "publishConfig": {
