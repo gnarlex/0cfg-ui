@@ -68,7 +68,7 @@ export interface SerializedLocation {
 }
 
 const serialize = (location: Location): SerializedLocation => ({
-    hash: location.hash,
+    hash: location.hash.substring(1),
     hostname: location.hostname,
     pathname: location.pathname,
     search: location.search,
