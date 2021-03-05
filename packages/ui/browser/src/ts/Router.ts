@@ -12,7 +12,7 @@ export type ListenerRemovalFunction = () => void;
 * Guaranteed serializable version of the window.location object in the browser.
 * This is necessary to save the properties at one point in time and reuse them later.
  */
-export interface SerializedLocation {
+export interface SerializableLocation {
     /**
      * Returns the Location object's URL's fragment (includes leading "#" if non-empty).
      *
@@ -67,8 +67,8 @@ export interface SerializedLocation {
     readonly search: string;
 }
 
-const serialize = (location: Location): SerializedLocation => ({
-    hash: location.hash.substring(1),
+const serialize = (location: Location): SerializableLocation => ({
+    hash: location.hash,
     hostname: location.hostname,
     pathname: location.pathname,
     search: location.search,
@@ -79,19 +79,19 @@ const serialize = (location: Location): SerializedLocation => ({
     protocol: location.protocol,
 });
 
-export type UrlChangeListener = (location: SerializedLocation) => Promise<void> | void;
+export type UrlChangeListener = (location: SerializableLocation) => Promise<void> | void;
 
 /**
  * Regex matching on location.pathname.
  */
-export const regex = (regex: RegExp): Predicate<SerializedLocation> =>
-    (location: SerializedLocation) => regex.test(location.pathname);
+export const regex = (regex: RegExp): Predicate<SerializableLocation> =>
+    (location: SerializableLocation) => regex.test(location.pathname);
 
 /**
  * Exact comparison with location.pathname.
  */
-export const path = (path: string): Predicate<SerializedLocation> =>
-    (location: SerializedLocation) => path === location.pathname;
+export const path = (path: string): Predicate<SerializableLocation> =>
+    (location: SerializableLocation) => path === location.pathname;
 
 /**
  * Glob matching agains location.pathname.
@@ -104,10 +104,10 @@ export const path = (path: string): Predicate<SerializedLocation> =>
  * - regex character classes (foo-[1-5].js)
  * - regex logical "or" (foo/(abc|xyz).js)
  */
-export const glob = (pattern: string): Predicate<SerializedLocation> =>
-    (location: SerializedLocation) => micromatch.isMatch(location.pathname, pattern);
+export const glob = (pattern: string): Predicate<SerializableLocation> =>
+    (location: SerializableLocation) => micromatch.isMatch(location.pathname, pattern);
 
-type Detour = { readonly condition: Predicate<SerializedLocation> | undefined, readonly handler: UrlChangeListener }
+type Detour = { readonly condition: Predicate<SerializableLocation> | undefined, readonly handler: UrlChangeListener }
 
 /**
  * Generic SPA router intended to be used in the entry point of a frontend application,
@@ -122,8 +122,8 @@ type Detour = { readonly condition: Predicate<SerializedLocation> | undefined, r
 export class Router {
 
     private readonly urlChangeListeners: Detour[] = [];
-    private readonly routingQueue: BufferQueue<SerializedLocation> =
-        new BufferQueue<SerializedLocation>(ROUTING_QUEUE_LENGTH);
+    private readonly routingQueue: BufferQueue<SerializableLocation> =
+        new BufferQueue<SerializableLocation>(ROUTING_QUEUE_LENGTH);
     private routing: boolean = false;
 
     // prevent inheritance, allow singleton
@@ -152,7 +152,7 @@ export class Router {
      * @param condition the listener will be executed on a url if the condition is undefined or evaluates to true.
      * Use to improve readability for simple conditions (e.g. location.pathname === "app").
      */
-    public onUrlChange(listener: UrlChangeListener, condition?: Predicate<SerializedLocation>): this {
+    public onUrlChange(listener: UrlChangeListener, condition?: Predicate<SerializableLocation>): this {
         this.urlChangeListeners.push({handler: listener, condition: condition});
         return this;
     }
@@ -183,7 +183,7 @@ export class Router {
         })();
     }
 
-    private async execRoute(location: SerializedLocation): Promise<void> {
+    private async execRoute(location: SerializableLocation): Promise<void> {
         for (const listener of this.urlChangeListeners) {
             if (!has(listener.condition) || listener.condition(location)) {
                 await listener.handler(location);
