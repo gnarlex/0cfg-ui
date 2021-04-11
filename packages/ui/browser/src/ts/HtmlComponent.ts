@@ -3,6 +3,9 @@ import {randomString} from '@0cfg/utils-common/lib/randomString';
 import {has} from '@0cfg/utils-common/lib/has';
 import {RenderLocation} from './RenderLocation';
 import {injectable} from 'inversify';
+import {errStatus} from '@0cfg/reply-common/lib/Reply';
+
+const timeoutBeforeWarning: number = 5000;
 
 export class AlreadyRenderedError extends Error {
     public constructor() {
@@ -175,6 +178,9 @@ export class HtmlComponent implements Destroyable {
         container: HtmlComponentContainer,
         renderLocation = RenderLocation.IntoEnd
     ): Promise<this> {
+
+        const renderStart = Date.now();
+
         if (!has(container)) {
             throw new UndefinedContainerElementError();
         } else {
@@ -201,6 +207,10 @@ export class HtmlComponent implements Destroyable {
             this.hide();
         } else {
             this.visibilityState = true;
+        }
+
+        if ((Date.now() - renderStart) > timeoutBeforeWarning) {
+            errStatus(`Component render took more than ${timeoutBeforeWarning} seconds.`).log();
         }
         return this;
     }
