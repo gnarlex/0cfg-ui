@@ -77,16 +77,19 @@ export class HtmlComponent implements Destroyable {
     private hideWhenRendered: boolean = false;
 
     /**
+     * Intended to be overridden by subclasses.
      * See: https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML
      */
     protected readonly htmlContent?: string;
 
     /**
+     * Intended to be overridden by subclasses.
      * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class
      */
     protected readonly classAttr?: string;
 
     /**
+     * Intended to be overridden by subclasses.
      * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style
      */
     protected readonly styleAttr?: string
