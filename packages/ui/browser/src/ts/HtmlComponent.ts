@@ -153,7 +153,7 @@ export class HtmlComponent implements Destroyable {
         }
         await this.beforeEveryRender();
 
-        this.createElementAndApplyAttributes()
+        await this.createElementAndApplyAttributes()
             .renderToTargetAndLocation(renderLocation, HtmlComponent.getRenderTarget(container))
             .afterEveryRender();
 
