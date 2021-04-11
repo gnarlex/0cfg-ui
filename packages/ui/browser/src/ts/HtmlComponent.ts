@@ -142,7 +142,7 @@ export class HtmlComponent implements Destroyable {
         const renderStart = Date.now();
 
         if (!has(container)) {
-            throw( new UndefinedContainerElementError());
+            throw(new UndefinedContainerElementError());
         }
         if (this.isRendered()) {
             throw new AlreadyRenderedError();
@@ -370,7 +370,7 @@ export class HtmlComponent implements Destroyable {
      * This method is called only once per instance.
      * This default implementation does nothing.
      */
-    protected beforeFirstRender(): void {
+    protected async beforeFirstRender(): Promise<void> {
         // do nothing here
     }
 
@@ -378,7 +378,7 @@ export class HtmlComponent implements Destroyable {
      * Override this to do things before rendering.
      * This default implementation does nothing.
      */
-    protected beforeEveryRender(): void {
+    protected async beforeEveryRender(): Promise<void> {
         // do nothing here
     }
 
@@ -386,7 +386,7 @@ export class HtmlComponent implements Destroyable {
      * Override this to do things after rendering.
      * This default implementation does nothing.
      */
-    protected afterEveryRender(): void {
+    protected async afterEveryRender(): Promise<void> {
         // do nothing here
     }
 
