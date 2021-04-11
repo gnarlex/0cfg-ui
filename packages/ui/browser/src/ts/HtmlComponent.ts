@@ -153,9 +153,10 @@ export class HtmlComponent implements Destroyable {
         }
         await this.beforeEveryRender();
 
-        await this.createElementAndApplyAttributes()
-            .renderToTargetAndLocation(renderLocation, HtmlComponent.getRenderTarget(container))
-            .afterEveryRender();
+        this.createElementAndApplyAttributes()
+            .renderToTargetAndLocation(renderLocation, HtmlComponent.getRenderTarget(container)).afterEveryRenderSync();
+
+        this.afterEveryRender();
 
         this.isVisible() &&
         this.fireVisibilityChange(this.isVisible());
@@ -387,6 +388,15 @@ export class HtmlComponent implements Destroyable {
      * This default implementation does nothing.
      */
     protected async afterEveryRender(): Promise<void> {
+        // do nothing here
+    }
+
+    /**
+     * Override this to do things synchronously after rendering.
+     * This default implementation does nothing.
+     * Note that this can block the node process and should be used with caution.
+     */
+    protected afterEveryRenderSync(): void {
         // do nothing here
     }
 
