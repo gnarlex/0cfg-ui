@@ -2,11 +2,11 @@ import {Destroyable} from './Destroyable';
 import {randomString} from '@0cfg/utils-common/lib/randomString';
 import {has} from '@0cfg/utils-common/lib/has';
 import {RenderLocation} from './RenderLocation';
-import {copy} from '@0cfg/utils-common/lib/copy';
+import {injectable} from 'inversify';
 
 export class AlreadyRenderedError extends Error {
     public constructor() {
-        super('The component was already rendered.');
+        super('The component was already rendered. Call .destroy() before rendering again.');
     }
 }
 
@@ -22,11 +22,18 @@ export class SelectorMissedError extends Error {
     }
 }
 
-export class UnknwonRenderLocationError extends Error {
+export class UnknownLocationError extends Error {
     public constructor(renderLocation: string) {
         super(`Unknown render location ${renderLocation}.`);
     }
 }
+
+/**
+ * Location in the DOM to which a HtmlComponent can be rendered.
+ * Note that a string selector always points to the first element which was found in the DOM/scope.
+ * (See https://developer.mozilla.org/de/docs/Web/API/Document/querySelector for more information).
+ */
+export type HtmlComponentContainer = string | HTMLElement | HtmlComponent;
 
 /**
  * In ms.
@@ -46,7 +53,14 @@ export const animationDurationLong = 300;
  * Those elements are either defined in the constructor by setting htmlContent
  * or by adding them dynamically in the {@link renderTo} method.
  */
+@injectable()
 export class HtmlComponent implements Destroyable {
+
+    private htmlContent_?: string;
+    private classAttr_?: string;
+    private styleAttr_?: string;
+    private parent_?: HtmlComponent;
+
     /**
      * this component instance id, will be added as a class to our root.
      */
@@ -55,11 +69,7 @@ export class HtmlComponent implements Destroyable {
      * Quite convenient for debugging, however this could be done with a watch expression as well
      */
     protected readonly type = this.constructor.name;
-    protected readonly htmlContent?: string;
-    protected readonly classAttr?: string;
-    protected readonly styleAttr?: string;
     protected renderedOnce: boolean = false;
-    protected parent?: HtmlComponent;
 
     private readonly parentListeners: Set<(() => unknown)> = new Set<(() => unknown)>();
     private readonly visibilityChangeListeners: Set<((visible: boolean) => unknown)> =
@@ -74,43 +84,103 @@ export class HtmlComponent implements Destroyable {
      */
     private element?: HTMLElement;
     private hideWhenRendered: boolean = false;
+    private renderLocation?: RenderLocation;
+    private container?: HtmlComponentContainer;
 
-    /**
-     * @param htmlContent A string that will be set as the html content of the HTML div element.
-     *     If you want to set the content of this html component dynamically
-     *     then don't set this parameter and overwrite {@link renderTo} instead.
-     * @param classAttr Specifies the content of the class attribute of the HTML div element.
-     * @param styleAttr Specifies the content of the style attribute of the HTML div element.
-     * @param parent Used to propagate visibility changes.
-     */
-    public constructor(htmlContent?: Readonly<string>,
-                       classAttr?: Readonly<string>,
-                       styleAttr?: Readonly<string>,
-                       parent?: HtmlComponent) {
-        if (has(htmlContent)) {
-            this.htmlContent = copy(htmlContent).trim();
-        }
-        if (has(classAttr)) {
-            this.classAttr = copy(classAttr).trim();
-        }
-        if (has(styleAttr)) {
-            this.styleAttr = copy(styleAttr).trim();
-        }
+    public constructor() {
+    }
 
-        this.parent = parent;
+    public static create(): HtmlComponent {
+        return new HtmlComponent();
+    }
+
+    protected set parent(parent: HtmlComponent | undefined) {
+        this.parent_ = parent;
         if (has(this.parent) && this.visibilityChangeListeners.size > 0) {
             this.parent.onVisibilityChange(this.myParentVisibilityListener);
         }
     }
 
+    protected get parent(): HtmlComponent | undefined {
+        return this.parent_;
+    }
+
     /**
-     * @param container Either a query selector or a HTMLElement
-     * @param renderLocation The target render location relative to the container.
+     * Set the parent component of this component in order to propagate visibility changes bidirectionally.
+     */
+    public setParent(parent: HtmlComponent | undefined): this {
+        this.parent = parent;
+        return this;
+    }
+
+    protected set htmlContent(htmlContent: string | undefined) {
+        this.htmlContent_ = htmlContent;
+        this.maybeRenderAgain();
+    }
+
+    protected get htmlContent(): string | undefined {
+        return this.htmlContent_;
+    }
+
+    /**
+     * See: https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML
+     */
+    public setHtmlContent(htmlContent: string): this {
+        this.htmlContent = htmlContent;
+        return this;
+    }
+
+    protected set classAttr(string: string | undefined) {
+        this.classAttr_ = string;
+        this.maybeRenderAgain();
+    }
+
+    protected get classAttr(): string | undefined {
+        return this.classAttr_;
+    }
+
+    /**
+     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class
+     */
+    public setClassAttribute(classAttr: string): this {
+        this.classAttr = classAttr;
+        return this;
+    }
+
+    protected set styleAttr(string: string | undefined) {
+        this.styleAttr_ = string;
+        this.maybeRenderAgain();
+    }
+
+    protected get styleAttr(): string | undefined {
+        return this.styleAttr_;
+    }
+
+    /**
+     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style
+     */
+    public setStyleAttribute(styleAttr: string): this {
+        this.styleAttr_ = styleAttr;
+        return this;
+    }
+
+    private maybeRenderAgain(): void {
+        this.isRendered() && this.destroy().then(() => this.renderTo(this.container!, this.renderLocation));
+    }
+
+    /**
+     * Renders to a {@link HtmlComponentContainer}.
      */
     public async renderTo(
-        container: string | HTMLElement | HtmlComponent,
+        container: HtmlComponentContainer,
         renderLocation = RenderLocation.IntoEnd
     ): Promise<this> {
+        if (!has(container)) {
+            throw new UndefinedContainerElementError();
+        } else {
+            this.container = container;
+            this.renderLocation = renderLocation;
+        }
         if (this.isRendered()) {
             throw new AlreadyRenderedError();
         }
@@ -118,24 +188,55 @@ export class HtmlComponent implements Destroyable {
             this.renderedOnce = true;
             await this.beforeFirstRender();
         }
-        await this.beforeComponentRender();
+        await this.beforeEveryRender();
 
-        if (!has(container)) {
-            throw new UndefinedContainerElementError();
-        }
+        this.createElementAndApplyAttributes()
+            .renderToTargetAndLocation(renderLocation, HtmlComponent.getRenderTarget(container))
+            .afterEveryRender();
 
-        let renderTarget;
-        if (typeof container === 'string') {
-            renderTarget = document.querySelector(container);
-            if (!has(renderTarget)) {
-                throw new SelectorMissedError(container);
-            }
-        } else if ('getRootElement' in container) {
-            renderTarget = container.getRootElement();
+        this.isVisible() &&
+        this.fireVisibilityChange(this.isVisible());
+
+        if (this.hideWhenRendered) {
+            this.hide();
         } else {
-            renderTarget = container;
+            this.visibilityState = true;
         }
+        return this;
+    }
 
+    private renderToTargetAndLocation(renderLocation: RenderLocation,
+                                      renderTarget: HTMLElement): this {
+        const parentNode = renderTarget.parentNode;
+        switch (renderLocation) {
+            case RenderLocation.IntoBeginning:
+                renderTarget.prepend(this.element!);
+                break;
+            case RenderLocation.Before:
+                if (has(parentNode)) {
+                    parentNode.insertBefore(this.element!, renderTarget);
+                } else {
+                    document.insertBefore(this.element!, renderTarget);
+                }
+                break;
+            case RenderLocation.After:
+                if (has(parentNode)) {
+                    parentNode.insertBefore(this.element!, renderTarget.nextSibling);
+                } else {
+                    document.insertBefore(this.element!, renderTarget.nextSibling);
+                }
+                break;
+            case RenderLocation.IntoEnd:
+                renderTarget.append(this.element!);
+                break;
+            default:
+                this.element = undefined;
+                throw new UnknownLocationError(renderLocation);
+        }
+        return this;
+    }
+
+    private createElementAndApplyAttributes(): this {
         this.element = document.createElement('div');
         if (has(this.htmlContent)) {
             this.element.innerHTML = this.htmlContent;
@@ -147,47 +248,18 @@ export class HtmlComponent implements Destroyable {
         if (has(this.styleAttr)) {
             this.element.setAttribute('style', this.styleAttr);
         }
-
-        const parentNode = renderTarget.parentNode;
-
-        switch (renderLocation) {
-            case RenderLocation.IntoBeginning:
-                renderTarget.prepend(this.element);
-                break;
-            case RenderLocation.Before:
-                if (has(parentNode)) {
-                    parentNode.insertBefore(this.element, renderTarget);
-                } else {
-                    document.insertBefore(this.element, renderTarget);
-                }
-                break;
-            case RenderLocation.After:
-                if (has(parentNode)) {
-                    parentNode.insertBefore(this.element, renderTarget.nextSibling);
-                } else {
-                    document.insertBefore(this.element, renderTarget.nextSibling);
-                }
-                break;
-            case RenderLocation.IntoEnd:
-                renderTarget.append(this.element);
-                break;
-            default:
-                this.element = undefined;
-                throw new UnknwonRenderLocationError(renderLocation);
-        }
-
-        await this.afterComponentRender();
-        if (this.isVisible()) {
-            this.fireVisibilityChange(this.isVisible());
-        }
-
-        if (this.hideWhenRendered) {
-            this.hide();
-        } else {
-            this.visibilityState = true;
-        }
-
         return this;
+    }
+
+    private static getRenderTarget(container: HtmlComponentContainer): HTMLElement {
+        if (typeof container === 'string') {
+            const renderTarget = document.querySelector(container);
+            if (!has(renderTarget)) {
+                throw new SelectorMissedError(container);
+            }
+            return <HTMLElement>renderTarget;
+        }
+        return 'getRootElement' in container ? container.getRootElement() : container;
     }
 
     /**
@@ -275,6 +347,9 @@ export class HtmlComponent implements Destroyable {
         }
     }
 
+    /**
+     * Attaches a listener which is invoked after a visibility change (hidden or shown).
+     */
     public onVisibilityChange(listener: (visible: boolean) => unknown): void {
         this.visibilityChangeListeners.add(listener);
         if (has(this.parent) && this.visibilityChangeListeners.size === 1) {
@@ -283,6 +358,9 @@ export class HtmlComponent implements Destroyable {
         }
     }
 
+    /**
+     * Removes a visibility change listener.
+     */
     public removeVisibilityChangeListener(listener: (visible: boolean) => unknown): void {
         this.visibilityChangeListeners.delete(listener);
         if (has(this.parent) && this.visibilityChangeListeners.size === 0) {
@@ -333,7 +411,7 @@ export class HtmlComponent implements Destroyable {
      * Override this to do things before rendering.
      * This default implementation does nothing.
      */
-    protected beforeComponentRender(): void {
+    protected beforeEveryRender(): void {
         // do nothing here
     }
 
@@ -341,7 +419,7 @@ export class HtmlComponent implements Destroyable {
      * Override this to do things after rendering.
      * This default implementation does nothing.
      */
-    protected afterComponentRender(): void {
+    protected afterEveryRender(): void {
         // do nothing here
     }
 
