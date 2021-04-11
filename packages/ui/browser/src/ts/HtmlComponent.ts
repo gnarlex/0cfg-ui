@@ -105,7 +105,11 @@ export class HtmlComponent implements Destroyable {
     protected readonly type = this.constructor.name;
     protected renderedOnce: boolean = false;
 
-    public constructor() {
+    /**
+     * Constructor intended for override but no direct usage.
+     * Refer to {@link HtmlComponent.create()} to create HtmlComponents directly.
+     */
+    protected constructor() {
     }
 
     public static create(htmlContent?: string, classAttr?: string, styleAttr?: string): HtmlComponent {
