@@ -59,9 +59,7 @@ export const animationDurationLong = 300;
 @injectable()
 export class HtmlComponent implements Destroyable {
 
-    private htmlContent_?: string;
-    private classAttr_?: string;
-    private styleAttr_?: string;
+
     private parent_?: HtmlComponent;
     private readonly parentListeners: Set<(() => unknown)> = new Set<(() => unknown)>();
     private readonly visibilityChangeListeners: Set<((visible: boolean) => unknown)> =
@@ -77,12 +75,27 @@ export class HtmlComponent implements Destroyable {
      */
     private element?: HTMLElement;
     private hideWhenRendered: boolean = false;
-    private renderLocation?: RenderLocation;
-    private container?: HtmlComponentContainer;
+
+    /**
+     * See: https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML
+     */
+    protected readonly htmlContent?: string;
+
+    /**
+     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class
+     */
+    protected readonly classAttr?: string;
+
+    /**
+     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style
+     */
+    protected readonly styleAttr?: string
+
     /**
      * this component instance id, will be added as a class to our root.
      */
     protected readonly id = '_c_' + randomString();
+
     /**
      * Quite convenient for debugging, however this could be done with a watch expression as well
      */
@@ -115,61 +128,6 @@ export class HtmlComponent implements Destroyable {
         return this;
     }
 
-    protected set htmlContent(htmlContent: string | undefined) {
-        this.htmlContent_ = htmlContent;
-        this.maybeRerender();
-    }
-
-    protected get htmlContent(): string | undefined {
-        return this.htmlContent_;
-    }
-
-    /**
-     * See: https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML
-     */
-    public setHtmlContent(htmlContent: string): this {
-        this.htmlContent = htmlContent;
-        return this;
-    }
-
-    protected set classAttr(string: string | undefined) {
-        this.classAttr_ = string;
-        this.maybeRerender();
-    }
-
-    protected get classAttr(): string | undefined {
-        return this.classAttr_;
-    }
-
-    /**
-     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class
-     */
-    public setClassAttribute(classAttr: string): this {
-        this.classAttr = classAttr;
-        return this;
-    }
-
-    protected set styleAttr(string: string | undefined) {
-        this.styleAttr_ = string;
-        this.maybeRerender();
-    }
-
-    protected get styleAttr(): string | undefined {
-        return this.styleAttr_;
-    }
-
-    /**
-     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style
-     */
-    public setStyleAttribute(styleAttr: string): this {
-        this.styleAttr_ = styleAttr;
-        return this;
-    }
-
-    private maybeRerender(): void {
-        this.isRendered() && this.destroy().then(() => this.renderTo(this.container!, this.renderLocation));
-    }
-
     /**
      * Renders to a {@link HtmlComponentContainer}.
      */
@@ -181,10 +139,8 @@ export class HtmlComponent implements Destroyable {
         const renderStart = Date.now();
 
         if (!has(container)) {
-            throw new UndefinedContainerElementError();
+            throw( new UndefinedContainerElementError());
         }
-        this.container = container;
-        this.renderLocation = renderLocation;
         if (this.isRendered()) {
             throw new AlreadyRenderedError();
         }
