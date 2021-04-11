@@ -63,20 +63,10 @@ export class HtmlComponent implements Destroyable {
     private classAttr_?: string;
     private styleAttr_?: string;
     private parent_?: HtmlComponent;
-
-    /**
-     * this component instance id, will be added as a class to our root.
-     */
-    protected readonly id = '_c_' + randomString();
-    /**
-     * Quite convenient for debugging, however this could be done with a watch expression as well
-     */
-    protected readonly type = this.constructor.name;
-    protected renderedOnce: boolean = false;
-
     private readonly parentListeners: Set<(() => unknown)> = new Set<(() => unknown)>();
     private readonly visibilityChangeListeners: Set<((visible: boolean) => unknown)> =
         new Set<((visible: boolean) => unknown)>();
+
     /**
      * Initialized to {@code false} because this component is not rendered yet.
      */
@@ -89,6 +79,15 @@ export class HtmlComponent implements Destroyable {
     private hideWhenRendered: boolean = false;
     private renderLocation?: RenderLocation;
     private container?: HtmlComponentContainer;
+    /**
+     * this component instance id, will be added as a class to our root.
+     */
+    protected readonly id = '_c_' + randomString();
+    /**
+     * Quite convenient for debugging, however this could be done with a watch expression as well
+     */
+    protected readonly type = this.constructor.name;
+    protected renderedOnce: boolean = false;
 
     public constructor() {
     }
@@ -118,7 +117,7 @@ export class HtmlComponent implements Destroyable {
 
     protected set htmlContent(htmlContent: string | undefined) {
         this.htmlContent_ = htmlContent;
-        this.maybeRenderAgain();
+        this.maybeRerender();
     }
 
     protected get htmlContent(): string | undefined {
@@ -135,7 +134,7 @@ export class HtmlComponent implements Destroyable {
 
     protected set classAttr(string: string | undefined) {
         this.classAttr_ = string;
-        this.maybeRenderAgain();
+        this.maybeRerender();
     }
 
     protected get classAttr(): string | undefined {
@@ -152,7 +151,7 @@ export class HtmlComponent implements Destroyable {
 
     protected set styleAttr(string: string | undefined) {
         this.styleAttr_ = string;
-        this.maybeRenderAgain();
+        this.maybeRerender();
     }
 
     protected get styleAttr(): string | undefined {
@@ -167,7 +166,7 @@ export class HtmlComponent implements Destroyable {
         return this;
     }
 
-    private maybeRenderAgain(): void {
+    private maybeRerender(): void {
         this.isRendered() && this.destroy().then(() => this.renderTo(this.container!, this.renderLocation));
     }
 
@@ -183,10 +182,9 @@ export class HtmlComponent implements Destroyable {
 
         if (!has(container)) {
             throw new UndefinedContainerElementError();
-        } else {
-            this.container = container;
-            this.renderLocation = renderLocation;
         }
+        this.container = container;
+        this.renderLocation = renderLocation;
         if (this.isRendered()) {
             throw new AlreadyRenderedError();
         }
