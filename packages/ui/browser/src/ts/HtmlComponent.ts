@@ -108,8 +108,13 @@ export class HtmlComponent implements Destroyable {
     public constructor() {
     }
 
-    public static create(): HtmlComponent {
-        return new HtmlComponent();
+    public static create(htmlContent?: string, classAttr?: string, styleAttr?: string): HtmlComponent {
+        const result: HtmlComponent = new class extends HtmlComponent {
+            protected readonly htmlContent?: string = htmlContent;
+            protected readonly classAttr?: string = classAttr;
+            protected readonly styleAttr?: string = styleAttr;
+        };
+        return result;
     }
 
     protected set parent(parent: HtmlComponent | undefined) {
