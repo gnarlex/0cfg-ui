@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed sourcemaps from the final build artifact
 
-## [0.0.1]
+## [0.1.0] - 2019-04-11
 
-First release of 0cfg-ui!
+### Changed
 
-[unreleased]: https://github.com/0cfg/0cfg-ui/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/0cfg/0cfg-ui/releases/tag/v0.0.1
+- Support inversify.js alongside HtmlComponents.
+
+[unreleased]: https://github.com/0cfg/0cfg-ui/compare/v0.1.0..HEAD
+[0.1.0]: https://github.com/0cfg/0cfg-ui/releases/tag/v0.1.0
