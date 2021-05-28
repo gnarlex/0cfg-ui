@@ -12,5 +12,8 @@ const objectToAttributes = (obj: Record<string, string>) => has(obj) ?
 
 const childrenToString = (children: string[]) => has(children) ? children.join('') : '';
 
+/**
+ * Fake react export to allow .tsx with minimal footprint.
+ */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const React = new ReactClass();
