@@ -15,5 +15,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First release of 0cfg-ui!
 
-[unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/codesphere/codesphere-monorepo/releases/tag/v0.0.1
+[unreleased]: https://github.com/0cfg/0cfg-utils/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/0cfg/0cfg-utils/releases/tag/v0.0.1
