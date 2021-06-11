@@ -12,7 +12,7 @@ PR's will be reviewed on a best effort basis and integrated into the next releas
 
 ### Prerequisites
 
-* NodeJs 14.4.0
+* NodeJs 14.4.0 or higher
 * Yarn
 
 ### Build
@@ -24,7 +24,7 @@ PR's will be reviewed on a best effort basis and integrated into the next releas
 
 ### Prerequisites
 
-* NodeJs 14.4.0
+* NodeJs 14.4.0 or higher
 * Yarn
 
 ### Build
