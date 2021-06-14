@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+- Updates the @0cfg/reply-common dependency
+
 ### Added
 
 - Support for node versions higher than 14.4.0
