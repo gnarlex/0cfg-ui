@@ -59,6 +59,7 @@ export const animationDurationLong = 300;
 @injectable()
 export class HtmlComponent implements Destroyable {
 
+    private isRendered_: boolean = false;
     private resolveRendered?: (value?: void | PromiseLike<void>) => void;
     private renderedPromise: Promise<void> = new Promise(resolve => {
         this.resolveRendered = resolve;
@@ -168,9 +169,6 @@ export class HtmlComponent implements Destroyable {
         this.createElementAndApplyAttributes()
             .renderToTargetAndLocation(renderLocation, HtmlComponent.getRenderTarget(container));
 
-        await this.afterEveryRenderSync();
-        this.afterEveryRender();
-
         this.isVisible() &&
         this.fireVisibilityChange(this.isVisible());
 
@@ -184,6 +182,9 @@ export class HtmlComponent implements Destroyable {
             errStatus(`Component render took more than ${timeoutBeforeWarning} seconds.`).log();
         }
         has(this.resolveRendered) && this.resolveRendered();
+        this.isRendered_ = true;
+        await this.afterEveryRenderSync();
+        this.afterEveryRender();
         return this;
     }
 
@@ -254,6 +255,7 @@ export class HtmlComponent implements Destroyable {
         this.renderedPromise = new Promise(resolve => {
             this.resolveRendered = resolve;
         });
+        this.isRendered_ = false;
         // do not substitute has(this.element) with this.isRendered() here - subclasses may override this.isRendered
         const doDestroy: () => Promise<void> = async () => {
             if (has(this.element)) {
@@ -314,7 +316,7 @@ export class HtmlComponent implements Destroyable {
      * If this component is currently rendered.
      */
     public isRendered(): boolean {
-        return has(this.element);
+        return this.isRendered_;
     }
 
     /**
