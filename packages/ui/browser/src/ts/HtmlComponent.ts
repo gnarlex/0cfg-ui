@@ -59,7 +59,7 @@ export const animationDurationLong = 300;
 @injectable()
 export class HtmlComponent implements Destroyable {
 
-    private resolveRendered?: (value?: void | PromiseLike<void> | undefined) => void;
+    private resolveRendered?: (value?: void | PromiseLike<void>) => void;
     private renderedPromise: Promise<void> = new Promise(resolve => {
         this.resolveRendered = resolve;
     });
