@@ -1,15 +1,21 @@
-import {Destroyable} from './Destroyable';
+import {injectable} from 'inversify';
+import {render, TemplateResult} from 'lit-html';
 import {randomString} from '@0cfg/utils-common/lib/randomString';
 import {has} from '@0cfg/utils-common/lib/has';
-import {RenderLocation} from './RenderLocation';
-import {injectable} from 'inversify';
 import {errStatus} from '@0cfg/reply-common/lib/Reply';
+import {RenderLocation} from './RenderLocation';
 
 const timeoutBeforeWarning: number = 5000;
 
 export class AlreadyRenderedError extends Error {
     public constructor() {
         super('The component was already rendered. Call .destroy() before rendering again.');
+    }
+}
+
+export class EmptyContentError extends Error {
+    public constructor() {
+        super('The HTML content is empty. Nothing to render.');
     }
 }
 
@@ -57,11 +63,10 @@ export const animationDurationLong = 300;
  * or by adding them dynamically in the {@link renderTo} method.
  */
 @injectable()
-export class HtmlComponent implements Destroyable {
-
+export class HtmlComponent {
 
     private parent_?: HtmlComponent;
-    private readonly parentListeners: Set<(() => unknown)> = new Set<(() => unknown)>();
+
     private readonly visibilityChangeListeners: Set<((visible: boolean) => unknown)> =
         new Set<((visible: boolean) => unknown)>();
 
@@ -80,7 +85,7 @@ export class HtmlComponent implements Destroyable {
      * Intended to be overridden by subclasses.
      * See: https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML
      */
-    protected readonly htmlContent?: string;
+    protected readonly htmlContent?: TemplateResult;
 
     /**
      * Intended to be overridden by subclasses.
@@ -112,9 +117,9 @@ export class HtmlComponent implements Destroyable {
     protected constructor() {
     }
 
-    public static create(htmlContent?: string, classAttr?: string, styleAttr?: string): HtmlComponent {
+    public static create(htmlContent?: TemplateResult, classAttr?: string, styleAttr?: string): HtmlComponent {
         const result: HtmlComponent = new class extends HtmlComponent {
-            protected readonly htmlContent?: string = htmlContent;
+            protected readonly htmlContent?: TemplateResult = htmlContent;
             protected readonly classAttr?: string = classAttr;
             protected readonly styleAttr?: string = styleAttr;
         };
@@ -141,6 +146,17 @@ export class HtmlComponent implements Destroyable {
     }
 
     /**
+     * Get HTML content without a wrapper.
+     *
+     * QUESTION (@romfrolov) How to make it work with findInScope and hooks?
+     */
+    public render(): TemplateResult {
+        if (!has(this.htmlContent)) throw new EmptyContentError();
+
+        return this.htmlContent;
+    }
+
+    /**
      * Renders to a {@link HtmlComponentContainer}.
      */
     public async renderTo(
@@ -151,7 +167,7 @@ export class HtmlComponent implements Destroyable {
         const renderStart = Date.now();
 
         if (!has(container)) {
-            throw(new UndefinedContainerElementError());
+            throw new UndefinedContainerElementError();
         }
         if (this.isRendered()) {
             throw new AlreadyRenderedError();
@@ -183,8 +199,10 @@ export class HtmlComponent implements Destroyable {
         return this;
     }
 
-    private renderToTargetAndLocation(renderLocation: RenderLocation,
-                                      renderTarget: HTMLElement): this {
+    private renderToTargetAndLocation(
+        renderLocation: RenderLocation,
+        renderTarget: HTMLElement,
+    ): this {
         const parentNode = renderTarget.parentNode;
         switch (renderLocation) {
             case RenderLocation.IntoBeginning:
@@ -217,7 +235,7 @@ export class HtmlComponent implements Destroyable {
     private createElementAndApplyAttributes(): this {
         this.element = document.createElement('div');
         if (has(this.htmlContent)) {
-            this.element.innerHTML = this.htmlContent;
+            render(this.htmlContent, this.element);
         }
         if (has(this.classAttr)) {
             this.element.setAttribute('class', this.classAttr);
