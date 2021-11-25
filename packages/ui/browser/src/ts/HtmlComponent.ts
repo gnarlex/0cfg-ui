@@ -1,11 +1,9 @@
 import {injectable} from 'inversify';
-import {render, TemplateResult} from 'lit-html';
-import {randomString} from '@0cfg/utils-common/lib/randomString';
+import {render, noChange} from 'lit-html';
 import {has} from '@0cfg/utils-common/lib/has';
 import {errStatus} from '@0cfg/reply-common/lib/Reply';
-import {RenderLocation} from './RenderLocation';
 
-const timeoutBeforeWarning: number = 5000;
+const RENDER_TIMEOUT_BEFORE_WARNING: number = 5000;
 
 export class AlreadyRenderedError extends Error {
     public constructor() {
@@ -44,28 +42,43 @@ export class UnknownLocationError extends Error {
  */
 export type HtmlComponentContainer = string | HTMLElement | HtmlComponent;
 
-/**
- * In ms.
- * Don't forget to adjust the corresponging sass variables as well when changing this constant.
- */
-export const animationDurationShort = 100;
+const validateCustomElementTagName = (tagName: string) => {
+    if (tagName.indexOf('-') <= 0) {
+        throw new Error('You need at least 1 dash in the custom element name');
+    }
+};
 
 /**
- * In ms.
- * Don't forget to adjust the corresponging sass variables as well when changing this constant.
+ * Allow for custom element classes with private constructors.
  */
-export const animationDurationLong = 300;
+type CustomElementClass = Omit<typeof HTMLElement, 'new'>;
 
 /**
- * Manages the lifecycle of a single html div element.
- * The div element can contain other arbitrary elements.
- * Those elements are either defined in the constructor by setting htmlContent
- * or by adding them dynamically in the {@link renderTo} method.
+ * Custom element decorator factory.
+ */
+export const customElement = (tagName: string) => (class_: CustomElementClass) => {
+    validateCustomElementTagName(tagName);
+    window.customElements.define(tagName, class_ as CustomElementConstructor);
+};
+
+/**
+ * Manages the lifecycle of a single custom HTML element.
  */
 @injectable()
-export class HtmlComponent {
+export class HtmlComponent extends HTMLElement {
 
-    private parent_?: HtmlComponent;
+    /**
+     * Intended to be overridden by subclasses.
+     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style
+     */
+    protected readonly styles?: string;
+
+    /**
+     * Quite convenient for debugging, however this could be done with a watch expression as well
+     */
+    protected readonly type = this.constructor.name;
+
+    protected renderedOnce: boolean = false;
 
     private readonly visibilityChangeListeners: Set<((visible: boolean) => unknown)> =
         new Set<((visible: boolean) => unknown)>();
@@ -74,118 +87,53 @@ export class HtmlComponent {
      * Initialized to {@code false} because this component is not rendered yet.
      */
     private visibilityState: boolean = false;
-    /**
-     * Set on render in {@link renderTo}.
-     * Set to undefined in {@link destroy}.
-     */
-    private element?: HTMLElement;
+
     private hideWhenRendered: boolean = false;
 
     /**
-     * Intended to be overridden by subclasses.
-     * See: https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML
+     * @returns An array containing the names of the attributes you want to observe. These attributes are being used
+     * to pass values to the custom element.
      */
-    protected readonly htmlContent?: TemplateResult;
-
-    /**
-     * Intended to be overridden by subclasses.
-     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class
-     */
-    protected readonly classAttr?: string;
-
-    /**
-     * Intended to be overridden by subclasses.
-     * See: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/style
-     */
-    protected readonly styleAttr?: string
-
-    /**
-     * this component instance id, will be added as a class to our root.
-     */
-    protected readonly id = '_c_' + randomString();
-
-    /**
-     * Quite convenient for debugging, however this could be done with a watch expression as well
-     */
-    protected readonly type = this.constructor.name;
-    protected renderedOnce: boolean = false;
+    public static get observedAttributes() { return []; }
 
     /**
      * Constructor intended for override but no direct usage.
      * Refer to {@link HtmlComponent.create()} to create HtmlComponents directly.
      */
     protected constructor() {
-    }
+        super();
 
-    public static create(htmlContent?: TemplateResult, classAttr?: string, styleAttr?: string): HtmlComponent {
-        const result: HtmlComponent = new class extends HtmlComponent {
-            protected readonly htmlContent?: TemplateResult = htmlContent;
-            protected readonly classAttr?: string = classAttr;
-            protected readonly styleAttr?: string = styleAttr;
-        };
-        return result;
-    }
-
-    protected set parent(parent: HtmlComponent | undefined) {
-        this.parent_ = parent;
-        if (has(this.parent) && this.visibilityChangeListeners.size > 0) {
-            this.parent.onVisibilityChange(this.myParentVisibilityListener);
-        }
-    }
-
-    protected get parent(): HtmlComponent | undefined {
-        return this.parent_;
+        // Create a shadow root.
+        this.attachShadow({mode: 'open'});
+        this.updateStyles();
     }
 
     /**
-     * Set the parent component of this component in order to propagate visibility changes bidirectionally.
+     * Triggered when this element is connected to the DOM.
      */
-    public setParent(parent: HtmlComponent | undefined): this {
-        this.parent = parent;
-        return this;
-    }
+    public async connectedCallback(): Promise<void> {
+        /**
+         * Ensure that the element is connected.
+         * @see https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#using_the_lifecycle_callbacks
+         */
+        if (!this.isConnected) return;
 
-    /**
-     * Get HTML content without a wrapper.
-     *
-     * QUESTION (@romfrolov) How to make it work with findInScope and hooks?
-     */
-    public render(): TemplateResult {
-        if (!has(this.htmlContent)) throw new EmptyContentError();
-
-        return this.htmlContent;
-    }
-
-    /**
-     * Renders to a {@link HtmlComponentContainer}.
-     */
-    public async renderTo(
-        container: HtmlComponentContainer,
-        renderLocation = RenderLocation.IntoEnd
-    ): Promise<this> {
+        console.log('Element connected');
 
         const renderStart = Date.now();
 
-        if (!has(container)) {
-            throw new UndefinedContainerElementError();
-        }
-        if (this.isRendered()) {
-            throw new AlreadyRenderedError();
-        }
         if (!this.renderedOnce) {
             this.renderedOnce = true;
             await this.beforeFirstRender();
         }
         await this.beforeEveryRender();
 
-        this.createElementAndApplyAttributes()
-            .renderToTargetAndLocation(renderLocation, HtmlComponent.getRenderTarget(container));
+        // Attach HTML content of this element to the DOM.
+        render(this.render(), this.shadowRoot!);
 
-        await this.afterEveryRenderSync();
         this.afterEveryRender();
 
-        this.isVisible() &&
-        this.fireVisibilityChange(this.isVisible());
+        this.isVisible() && this.fireVisibilityChange(this.isVisible());
 
         if (this.hideWhenRendered) {
             this.hide();
@@ -193,100 +141,56 @@ export class HtmlComponent {
             this.visibilityState = true;
         }
 
-        if ((Date.now() - renderStart) > timeoutBeforeWarning) {
-            errStatus(`Component render took more than ${timeoutBeforeWarning} seconds.`).log();
+        if ((Date.now() - renderStart) > RENDER_TIMEOUT_BEFORE_WARNING) {
+            errStatus(`Component render took more than ${RENDER_TIMEOUT_BEFORE_WARNING} seconds.`).log();
         }
-        return this;
-    }
-
-    private renderToTargetAndLocation(
-        renderLocation: RenderLocation,
-        renderTarget: HTMLElement,
-    ): this {
-        const parentNode = renderTarget.parentNode;
-        switch (renderLocation) {
-            case RenderLocation.IntoBeginning:
-                renderTarget.prepend(this.element!);
-                break;
-            case RenderLocation.Before:
-                if (has(parentNode)) {
-                    parentNode.insertBefore(this.element!, renderTarget);
-                } else {
-                    document.insertBefore(this.element!, renderTarget);
-                }
-                break;
-            case RenderLocation.After:
-                if (has(parentNode)) {
-                    parentNode.insertBefore(this.element!, renderTarget.nextSibling);
-                } else {
-                    document.insertBefore(this.element!, renderTarget.nextSibling);
-                }
-                break;
-            case RenderLocation.IntoEnd:
-                renderTarget.append(this.element!);
-                break;
-            default:
-                this.element = undefined;
-                throw new UnknownLocationError(renderLocation);
-        }
-        return this;
-    }
-
-    private createElementAndApplyAttributes(): this {
-        this.element = document.createElement('div');
-        if (has(this.htmlContent)) {
-            render(this.htmlContent, this.element);
-        }
-        if (has(this.classAttr)) {
-            this.element.setAttribute('class', this.classAttr);
-        }
-        this.element.classList.add(this.id);
-        if (has(this.styleAttr)) {
-            this.element.setAttribute('style', this.styleAttr);
-        }
-        return this;
-    }
-
-    private static getRenderTarget(container: HtmlComponentContainer): HTMLElement {
-        if (typeof container === 'string') {
-            const renderTarget = document.querySelector(container);
-            if (!has(renderTarget)) {
-                throw new SelectorMissedError(container);
-            }
-            return <HTMLElement>renderTarget;
-        }
-        return 'getRootElement' in container ? container.getRootElement() : container;
     }
 
     /**
-     * @param fadeOut If {@code true}, the html element will get the being-destroyed class added for a short duration
-     *              before being removed from the dom.
-     *              The exact duration is {@link animationDurationShort} milliseconds.
-     *              The method will still only return once the element is fully removed from the dom.
+     * Triggered when this element is disconnected from the DOM.
      */
-    public destroy(fadeOut: boolean = false): Promise<void> {
-        // do not substitute has(this.element) with this.isRendered() here - subclasses may override this.isRendered
-        const doDestroy: () => Promise<void> = async () => {
-            if (has(this.element)) {
-                this.element.remove();
-            }
-            delete this.element;
-            this.fireVisibilityChange(false);
-        };
-        if (fadeOut) {
-            return new Promise<void>(resolve => {
-                if (has(this.element)) {
-                    this.element.classList.add('being-destroyed');
-                }
-                setTimeout(async () => {
-                    await doDestroy();
-                    resolve();
-                }, animationDurationShort);
-            });
-        } else {
-            return doDestroy();
-        }
+    public disconnectedCallback(): void {
+        console.log('Element disconnected');
     }
+
+    /**
+     * Triggered when an atribute that we observe {@link observedAttributes} has been changed.
+     */
+    public attributeChangedCallback(): void {
+        console.log('Attribute changed');
+        // TODO (@romfrolov) Handle changed attribute.
+    }
+
+    // REVIEW (@romfrolov)
+    // /**
+    //  * @param fadeOut If {@code true}, the html element will get the being-destroyed class added for a short duration
+    //  *              before being removed from the dom.
+    //  *              The exact duration is {@link animationDurationShort} milliseconds.
+    //  *              The method will still only return once the element is fully removed from the dom.
+    //  */
+    // public destroy(fadeOut: boolean = false): Promise<void> {
+    //     // do not substitute has(this.element) with this.isRendered() here - subclasses may override this.isRendered
+    //     const doDestroy: () => Promise<void> = async () => {
+    //         if (has(this.element)) {
+    //             this.element.remove();
+    //         }
+    //         delete this.element;
+    //         this.fireVisibilityChange(false);
+    //     };
+    //     if (fadeOut) {
+    //         return new Promise<void>(resolve => {
+    //             if (has(this.element)) {
+    //                 this.element.classList.add('being-destroyed');
+    //             }
+    //             setTimeout(async () => {
+    //                 await doDestroy();
+    //                 resolve();
+    //             }, animationDurationShort);
+    //         });
+    //     } else {
+    //         return doDestroy();
+    //     }
+    // }
 
     /**
      * Find the first dom element inside this component matching the {@param selector}.
@@ -294,11 +198,6 @@ export class HtmlComponent {
      * An error is also thrown if the html component is not rendered yet.
      */
     public findInScope<T extends HTMLElement>(selector: string): T {
-        // do not substitute has(this.element) with this.isRendered() here - subclasses may override this.isRendered
-        if (!has(this.element)) {
-            throw new Error('findInScope called on an unrendered html component.');
-        }
-
         const result = this.findAllInScope(selector);
         if (!has(result) || result.length === 0) {
             throw new Error(`Element not found ${selector}`);
@@ -307,67 +206,42 @@ export class HtmlComponent {
     }
 
     /**
-     * Find all dom elements inside this component matching the {@param selector}
-     * If no element is found, an empty array is returned.
+     * Find all DOM elements inside this component matching the {@param selector}
+     * If no elements are found, an empty array is returned.
      *
      * An error is thrown if the html component is not rendered yet.
      */
     public findAllInScope(selector: string): HTMLElement[] {
-        // do not substitute has(this.element) with this.isRendered() here - subclasses may override this.isRendered
-        if (!has(this.element)) {
-            throw new Error('findAllInScope called on an unrendered html component.');
-        }
-
-        return Array.from(this.element.querySelectorAll(selector));
+        return Array.from(this.shadowRoot!.querySelectorAll(selector));
     }
 
     /**
-     * If this component is currently rendered.
+     * Whether this component is currently connected to the DOM.
+     * @alias isConnected
      */
     public isRendered(): boolean {
-        return has(this.element);
+        return this.isConnected;
     }
 
     /**
-     * Sets or overwrites the tooltip of this HtmlComponent.
-     * Technically speaking the tooltip is the title property of the Html
+     * Sets the tooltip of this HtmlComponent.
+     *
+     * Technically speaking the tooltip is the title property of the HTML
      * element.
+     *
      * The element must be render to the dom first otherwise this method does
-     * nothing {@see HtmlComponent#renderTo}.
-     * @param tooltip The tooltip to be displayed when hovering over this
-     *     HtmlComponent
+     * nothing {@see HtmlComponent#connectedCallback}.
+     *
+     * @param tooltip The tooltip text to be displayed when hovering over this HtmlComponent.
      */
     public setTooltip(tooltip: string): void {
-        if (has(this.element)) {
-            this.element.setAttribute('title', tooltip);
-        }
-    }
-
-    /**
-     * Attaches a listener which is invoked after a visibility change (hidden or shown).
-     */
-    public onVisibilityChange(listener: (visible: boolean) => unknown): void {
-        this.visibilityChangeListeners.add(listener);
-        if (has(this.parent) && this.visibilityChangeListeners.size === 1) {
-            // the first listener that we have. we also register at the parent then
-            this.parent.onVisibilityChange(this.myParentVisibilityListener);
-        }
-    }
-
-    /**
-     * Removes a visibility change listener.
-     */
-    public removeVisibilityChangeListener(listener: (visible: boolean) => unknown): void {
-        this.visibilityChangeListeners.delete(listener);
-        if (has(this.parent) && this.visibilityChangeListeners.size === 0) {
-            // deregister from the parent as we are not interested in visibility changes
-            // anymore
-            this.parent.removeVisibilityChangeListener(this.myParentVisibilityListener);
+        if (has(this)) {
+            this.setAttribute('title', tooltip);
         }
     }
 
     public isVisible(): boolean {
-        return this.visibilityState && (!has(this.parent) || this.parent.isVisible());
+        return this.visibilityState;
     }
 
     /**
@@ -375,7 +249,9 @@ export class HtmlComponent {
      */
     public show(): void {
         if (this.isRendered()) {
-            this.element?.classList.remove('hidden');
+            // NOTE (@romfrolov) That is opinionated.
+            // this.classList.remove('hidden');
+            this.hidden = false;
             this.visibilityState = true;
             this.fireVisibilityChange(this.isVisible());
         }
@@ -386,7 +262,9 @@ export class HtmlComponent {
      */
     public hide(): void {
         if (this.isRendered()) {
-            this.element?.classList.add('hidden');
+            // NOTE (@romfrolov) That is opinionated.
+            // this.classList.add('hidden');
+            this.hidden = true;
             this.visibilityState = false;
             this.fireVisibilityChange(this.isVisible());
         } else {
@@ -395,12 +273,21 @@ export class HtmlComponent {
     }
 
     /**
+     * Renders the HTML content of this element.
+     *
+     * Intended to be overridden by subclasses.
+     */
+    protected render(): unknown {
+        return noChange;
+    }
+
+    /**
      * Override this to do things before the first rendering run.
      * This method is called only once per instance.
      * This default implementation does nothing.
      */
     protected async beforeFirstRender(): Promise<void> {
-        // do nothing here
+        // Do nothing here.
     }
 
     /**
@@ -408,7 +295,7 @@ export class HtmlComponent {
      * This default implementation does nothing.
      */
     protected async beforeEveryRender(): Promise<void> {
-        // do nothing here
+        // Do nothing here.
     }
 
     /**
@@ -416,45 +303,22 @@ export class HtmlComponent {
      * This default implementation does nothing.
      */
     protected async afterEveryRender(): Promise<void> {
-        // do nothing here
-    }
-
-    /**
-     * Override this to do things synchronously after rendering.
-     * This default implementation does nothing.
-     * Note that this can block the node process and should be used with caution.
-     */
-    protected afterEveryRenderSync(): void {
-        // do nothing here
-    }
-
-    /**
-     * This throws function an error if the HtmlComponent is not rendered.
-     */
-    protected getRootElement(): HTMLElement {
-        if (!has(this.element)) {
-            throw new Error('Called getRootElement on an unrendered HtmlComponent.');
-        }
-        return this.element;
-    }
-
-    /**
-     * overwrite this if you want to do something like mind your own visibility state (see HideableHtmlComponent)
-     * @param visible
-     */
-    protected parentVisibilityChanged(visible: boolean): void {
-        this.fireVisibilityChange(visible);
+        // Do nothing here.
     }
 
     /**
      * Will inform all listeners of a visibility state change.
-     * will remember the old state and only fire if the state changes
-     * @param visible
+     * Will remember the old state and only fire if the state changes.
      */
     protected fireVisibilityChange(visible: boolean): void {
         this.visibilityChangeListeners.forEach(listener => listener(visible));
         this.visibilityState = visible;
     }
 
-    private myParentVisibilityListener = (visible: boolean): void => this.parentVisibilityChanged(visible);
+    private updateStyles(): void {
+        if (!has(this.styles)) return;
+
+        const shadow = this.shadowRoot!;
+        shadow.querySelector('style')!.textContent = this.styles;
+    }
 }
