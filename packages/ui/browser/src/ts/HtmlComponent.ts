@@ -3,7 +3,22 @@ import {render, noChange} from 'lit-html';
 import {has} from '@0cfg/utils-common/lib/has';
 import {errStatus} from '@0cfg/reply-common/lib/Reply';
 
+/**
+ * A rendering timeout after which a warning will be logged.
+ */
 const RENDER_TIMEOUT_BEFORE_WARNING: number = 5000;
+
+/**
+ * In ms.
+ * Don't forget to adjust the corresponging Sass variables as well when changing this constant.
+ */
+export const ANIMATION_DURATION_SHORT = 100;
+
+/**
+ * In ms.
+ * Don't forget to adjust the corresponging Sass variables as well when changing this constant.
+ */
+export const ANIMATION_DURATION_LONG = 300;
 
 export class AlreadyRenderedError extends Error {
     public constructor() {
@@ -161,36 +176,34 @@ export class HtmlComponent extends HTMLElement {
         // TODO (@romfrolov) Handle changed attribute.
     }
 
-    // REVIEW (@romfrolov)
-    // /**
-    //  * @param fadeOut If {@code true}, the html element will get the being-destroyed class added for a short duration
-    //  *              before being removed from the dom.
-    //  *              The exact duration is {@link animationDurationShort} milliseconds.
-    //  *              The method will still only return once the element is fully removed from the dom.
-    //  */
-    // public destroy(fadeOut: boolean = false): Promise<void> {
-    //     // do not substitute has(this.element) with this.isRendered() here - subclasses may override this.isRendered
-    //     const doDestroy: () => Promise<void> = async () => {
-    //         if (has(this.element)) {
-    //             this.element.remove();
-    //         }
-    //         delete this.element;
-    //         this.fireVisibilityChange(false);
-    //     };
-    //     if (fadeOut) {
-    //         return new Promise<void>(resolve => {
-    //             if (has(this.element)) {
-    //                 this.element.classList.add('being-destroyed');
-    //             }
-    //             setTimeout(async () => {
-    //                 await doDestroy();
-    //                 resolve();
-    //             }, animationDurationShort);
-    //         });
-    //     } else {
-    //         return doDestroy();
-    //     }
-    // }
+    /**
+     * @param fadeOut If {@code true}, the html element will get the being-destroyed class added for a short duration
+     * before being removed from the DOM. The exact duration is {@link ANIMATION_DURATION_SHORT} milliseconds.
+     *
+     * The method will return once the element is fully removed from the DOM.
+     */
+    public destroy(fadeOut: boolean = false): Promise<void> {
+        const doDestroy: () => Promise<void> = async () => {
+            if (this.isConnected) {
+                this.remove();
+            }
+            this.fireVisibilityChange(false);
+        };
+
+        if (fadeOut) {
+            return new Promise<void>(resolve => {
+                if (this.isConnected) {
+                    this.classList.add('being-destroyed');
+                }
+                setTimeout(async () => {
+                    await doDestroy();
+                    resolve();
+                }, ANIMATION_DURATION_SHORT);
+            });
+        }
+
+        return doDestroy();
+    }
 
     /**
      * Find the first dom element inside this component matching the {@param selector}.
