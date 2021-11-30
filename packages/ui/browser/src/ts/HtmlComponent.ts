@@ -1,7 +1,13 @@
 import {injectable} from 'inversify';
-import {render, noChange} from 'lit-html';
+import {render, noChange, html} from 'lit-html';
 import {has} from '@0cfg/utils-common/lib/has';
 import {errStatus} from '@0cfg/reply-common/lib/Reply';
+
+/**
+ * Export `render` method and a template literal `html` to ensure version consistency and provide an abstraction
+ * from lit-html.
+ */
+export {render, html};
 
 /**
  * A rendering timeout after which a warning will be logged.
@@ -109,11 +115,16 @@ export class HtmlComponent extends HTMLElement {
      * @returns An array containing the names of the attributes you want to observe. These attributes are being used
      * to pass values to the custom element.
      */
-    public static get observedAttributes() { return []; }
+    public static get observedAttributes(): string[] { return []; }
 
     /**
-     * Constructor intended for override but no direct usage.
-     * Refer to {@link HtmlComponent.create()} to create HtmlComponents directly.
+     * Constructor is intended for override but no direct usage.
+     *
+     * The constructor should be used to set up initial state and default values, and to set up event
+     * listeners and a shadow root.
+     *
+     * To read all of the requirements for custom element constructors and reactions
+     * @see https://html.spec.whatwg.org/multipage/custom-elements.html#custom-element-conformance
      */
     protected constructor() {
         super();
@@ -171,8 +182,8 @@ export class HtmlComponent extends HTMLElement {
     /**
      * Triggered when an atribute that we observe {@link observedAttributes} has been changed.
      */
-    public attributeChangedCallback(): void {
-        console.log('Attribute changed');
+    public attributeChangedCallback(name: string, oldValue: unknown, newValue: unknown): void {
+        console.log('Attribute changed', name, oldValue, newValue);
         // TODO (@romfrolov) Handle changed attribute.
     }
 
