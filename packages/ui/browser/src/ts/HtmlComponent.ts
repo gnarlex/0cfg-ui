@@ -131,7 +131,6 @@ export class HtmlComponent extends HTMLElement {
 
         // Create a shadow root.
         this.attachShadow({mode: 'open'});
-        this.updateStyles();
     }
 
     /**
@@ -156,6 +155,7 @@ export class HtmlComponent extends HTMLElement {
 
         // Attach HTML content of this element to the DOM.
         render(this.render(), this.shadowRoot!);
+        this.updateStyles();
 
         this.afterEveryRender();
 
@@ -342,7 +342,10 @@ export class HtmlComponent extends HTMLElement {
     private updateStyles(): void {
         if (!has(this.styles)) return;
 
+        const style = document.createElement('style');
+        style.textContent = this.styles;
+
         const shadow = this.shadowRoot!;
-        shadow.querySelector('style')!.textContent = this.styles;
+        shadow.appendChild(style);
     }
 }
