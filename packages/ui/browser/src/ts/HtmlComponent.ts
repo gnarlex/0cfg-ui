@@ -77,9 +77,9 @@ type CustomElementClass = Omit<typeof HTMLElement, 'new'>;
 /**
  * Custom element decorator factory.
  */
-export const customElement = (tagName: string) => (class_: CustomElementClass) => {
+export const customElement = (tagName: string) => (customElementClass: CustomElementClass) => {
     validateCustomElementTagName(tagName);
-    window.customElements.define(tagName, class_ as CustomElementConstructor);
+    window.customElements.define(tagName, customElementClass as CustomElementConstructor);
 };
 
 /**
@@ -139,6 +139,8 @@ export class HtmlComponent extends HTMLElement {
     public async connectedCallback(): Promise<void> {
         /**
          * Ensure that the element is connected.
+         *
+         * eslint-disable-next-line
          * @see https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#using_the_lifecycle_callbacks
          */
         if (!this.isConnected) return;

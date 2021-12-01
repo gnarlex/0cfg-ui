@@ -18,7 +18,7 @@
     "clean": "run-s _deleteBuildInfo _cleanPackages _deleteNodeModules",
     "prepare": "lerna run prepare",
     "lintFix": "eslint **/*.ts --ignore-pattern node_modules/ --ignore-pattern *.d.ts --quiet --fix",
-    "lint": "eslint **/*.ts --ignore-pattern node_modules/ --ignore-pattern *.d.ts --quiet",
+    "lint": "eslint **/*.ts --ignore-pattern node_modules/ --ignore-pattern *.d.ts --no-error-on-unmatched-pattern --quiet",
     "test": "lerna run test",
     "build": "lerna run build --stream",
     "storybook": "start-storybook -p 6006",
