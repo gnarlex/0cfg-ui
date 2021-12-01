@@ -1,5 +1,5 @@
 import {injectable} from 'inversify';
-import {render, noChange, html} from 'lit-html';
+import {render, noChange, html, svg} from 'lit-html';
 import {has} from '@0cfg/utils-common/lib/has';
 import {errStatus} from '@0cfg/reply-common/lib/Reply';
 
@@ -7,7 +7,7 @@ import {errStatus} from '@0cfg/reply-common/lib/Reply';
  * Export `render` method and a template literal `html` to ensure version consistency and provide an abstraction
  * from lit-html.
  */
-export {render, html};
+export {render, html, svg};
 
 /**
  * A rendering timeout after which a warning will be logged.
