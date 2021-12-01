@@ -3,7 +3,6 @@
   "compilerOptions": {
     "rootDir": "src/ts",
     "outDir": "lib",
-    "tsBuildInfoFile": ".build-tmp/tsconfig.tsbuildinfo",
-    "experimentalDecorators": true
+    "tsBuildInfoFile": ".build-tmp/tsconfig.tsbuildinfo"
   }
 }
