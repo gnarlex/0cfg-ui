@@ -143,11 +143,11 @@ export class HtmlComponent extends HTMLElement {
          */
         if (!this.isConnected) return;
 
-        console.log('Element connected');
+        const isFirstRender = !this.renderedOnce;
 
         const renderStart = Date.now();
 
-        if (!this.renderedOnce) {
+        if (isFirstRender) {
             this.renderedOnce = true;
             await this.beforeFirstRender();
         }
@@ -157,6 +157,9 @@ export class HtmlComponent extends HTMLElement {
         render(this.render(), this.shadowRoot!);
         this.updateStyles();
 
+        if (isFirstRender) {
+            this.afterFirstRender();
+        }
         this.afterEveryRender();
 
         this.isVisible() && this.fireVisibilityChange(this.isVisible());
@@ -176,15 +179,14 @@ export class HtmlComponent extends HTMLElement {
      * Triggered when this element is disconnected from the DOM.
      */
     public disconnectedCallback(): void {
-        console.log('Element disconnected');
+        // Override to handle the disconnect event.
     }
 
     /**
      * Triggered when an atribute that we observe {@link observedAttributes} has been changed.
      */
     public attributeChangedCallback(name: string, oldValue: unknown, newValue: unknown): void {
-        console.log('Attribute changed', name, oldValue, newValue);
-        // TODO (@romfrolov) Handle changed attribute.
+        // Override to handle changed attribute.
     }
 
     /**
@@ -319,6 +321,15 @@ export class HtmlComponent extends HTMLElement {
      * This default implementation does nothing.
      */
     protected async beforeEveryRender(): Promise<void> {
+        // Do nothing here.
+    }
+
+    /**
+     * Override this to do things after the first rendering run.
+     * This method is called only once per instance.
+     * This default implementation does nothing.
+     */
+    protected async afterFirstRender(): Promise<void> {
         // Do nothing here.
     }
 
