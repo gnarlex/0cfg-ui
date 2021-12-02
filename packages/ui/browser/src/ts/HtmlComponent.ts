@@ -164,15 +164,29 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Find the first dom element inside this component matching the {@param selector}.
+     * Check whether a DOM element matching the {@param selector} exists inside of this component.
+     *
+     * Always returns false if the HTML component is not rendered yet.
+     */
+    public hasInScope(selector: string): boolean {
+        const result = this.findAllInScope(selector);
+
+        return (result.length > 0);
+    }
+
+    /**
+     * Find the first DOM element inside this component matching the {@param selector}.
      * If no element is found, an error is thrown.
-     * An error is also thrown if the html component is not rendered yet.
+     *
+     * An error is also thrown if the HTML component is not rendered yet.
      */
     public findInScope<T extends HTMLElement>(selector: string): T {
         const result = this.findAllInScope(selector);
-        if (!has(result) || result.length === 0) {
+
+        if (result.length === 0) {
             throw new Error(`Element not found ${selector}`);
         }
+
         return result[0] as T;
     }
 
@@ -180,7 +194,7 @@ export class HtmlComponent extends HTMLElement {
      * Find all DOM elements inside this component matching the {@param selector}
      * If no elements are found, an empty array is returned.
      *
-     * An error is thrown if the html component is not rendered yet.
+     * An error is thrown if the HTML component is not rendered yet.
      */
     public findAllInScope(selector: string): HTMLElement[] {
         return Array.from(this.shadowRoot!.querySelectorAll(selector));
