@@ -56,13 +56,6 @@ export class UnknownLocationError extends Error {
     }
 }
 
-/**
- * Location in the DOM to which a HtmlComponent can be rendered.
- * Note that a string selector always points to the first element which was found in the DOM/scope.
- * (See https://developer.mozilla.org/de/docs/Web/API/Document/querySelector for more information).
- */
-export type HtmlComponentContainer = string | HTMLElement | HtmlComponent;
-
 const validateCustomElementTagName = (tagName: string) => {
     if (tagName.indexOf('-') <= 0) {
         throw new Error('You need at least 1 dash in the custom element name');
@@ -145,36 +138,7 @@ export class HtmlComponent extends HTMLElement {
          */
         if (!this.isConnected) return;
 
-        const isFirstRender = !this.renderedOnce;
-
-        const renderStart = Date.now();
-
-        if (isFirstRender) {
-            this.renderedOnce = true;
-            await this.beforeFirstRender();
-        }
-        await this.beforeEveryRender();
-
-        // Attach HTML content of this element to the DOM.
-        render(this.render(), this.shadowRoot!);
-        this.updateStyles();
-
-        if (isFirstRender) {
-            this.afterFirstRender();
-        }
-        this.afterEveryRender();
-
-        this.isVisible() && this.fireVisibilityChange(this.isVisible());
-
-        if (this.hideWhenRendered) {
-            this.hide();
-        } else {
-            this.visibilityState = true;
-        }
-
-        if ((Date.now() - renderStart) > RENDER_TIMEOUT_BEFORE_WARNING) {
-            errStatus(`Component render took more than ${RENDER_TIMEOUT_BEFORE_WARNING} seconds.`).log();
-        }
+        this._render();
     }
 
     /**
@@ -301,6 +265,14 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
+     * Updates the HTML content by rerendering it. Only rerenders the content of the current component, doesn't affect
+     * child components.
+     */
+    public update(): void {
+        this._render();
+    }
+
+    /**
      * Renders the HTML content of this element.
      *
      * Intended to be overridden by subclasses.
@@ -352,13 +324,62 @@ export class HtmlComponent extends HTMLElement {
         this.visibilityState = visible;
     }
 
-    private updateStyles(): void {
+    /**
+     * Renders inner HTML of the component.
+     */
+    private async _render(): Promise<void> {
+        const isFirstRender = !this.renderedOnce;
+
+        const renderStart = Date.now();
+
+        if (isFirstRender) {
+            this.renderedOnce = true;
+            await this.beforeFirstRender();
+        }
+        await this.beforeEveryRender();
+
+        // Attach HTML content of this element to the DOM.
+        render(this.render(), this.shadowRoot!);
+        this._updateStyles();
+
+        if (isFirstRender) {
+            this.afterFirstRender();
+        }
+        this.afterEveryRender();
+
+        this.isVisible() && this.fireVisibilityChange(this.isVisible());
+
+        if (this.hideWhenRendered) {
+            this.hide();
+        } else {
+            this.visibilityState = true;
+        }
+
+        if ((Date.now() - renderStart) > RENDER_TIMEOUT_BEFORE_WARNING) {
+            errStatus(`Component render took more than ${RENDER_TIMEOUT_BEFORE_WARNING} seconds.`).log();
+        }
+    }
+
+    /**
+     * Updates styles. Will update the style element if it already exists, otherwise will create a new style element and
+     * append it to the shadow root.
+     */
+    private _updateStyles(): void {
         if (!has(this.styles)) return;
 
-        const style = document.createElement('style');
-        style.textContent = this.styles;
-
         const shadow = this.shadowRoot!;
-        shadow.appendChild(style);
+
+        const style = shadow.querySelector('style');
+
+        if (has(style)) {
+            if (style.textContent === this.styles) return;
+
+            style.textContent = this.styles;
+            return;
+        }
+
+        const newStyle = document.createElement('style');
+        newStyle.textContent = this.styles;
+        shadow.appendChild(newStyle);
     }
 }
