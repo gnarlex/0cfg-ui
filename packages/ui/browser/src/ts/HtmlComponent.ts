@@ -26,36 +26,6 @@ export const ANIMATION_DURATION_SHORT = 100;
  */
 export const ANIMATION_DURATION_LONG = 300;
 
-export class AlreadyRenderedError extends Error {
-    public constructor() {
-        super('The component was already rendered. Call .destroy() before rendering again.');
-    }
-}
-
-export class EmptyContentError extends Error {
-    public constructor() {
-        super('The HTML content is empty. Nothing to render.');
-    }
-}
-
-export class UndefinedContainerElementError extends Error {
-    public constructor() {
-        super('The container element was undefined.');
-    }
-}
-
-export class SelectorMissedError extends Error {
-    public constructor(selector: string) {
-        super(`Selector ${selector} points at no dom element.`);
-    }
-}
-
-export class UnknownLocationError extends Error {
-    public constructor(renderLocation: string) {
-        super(`Unknown render location ${renderLocation}.`);
-    }
-}
-
 const validateCustomElementTagName = (tagName: string) => {
     if (tagName.indexOf('-') <= 0) {
         throw new Error('You need at least 1 dash in the custom element name');
