@@ -232,28 +232,25 @@ export class HtmlComponent extends HTMLElement {
      * Show (not copy) this component in the DOM.
      */
     public show(): void {
-        if (this.isRendered()) {
-            // NOTE (@romfrolov) That is opinionated.
-            // this.classList.remove('hidden');
-            this.hidden = false;
-            this.visibilityState = true;
-            this.fireVisibilityChange(this.isVisible());
-        }
+        if (!this.isRendered()) return;
+
+        this.classList.remove('hidden');
+        this.visibilityState = true;
+        this.fireVisibilityChange(this.isVisible());
     }
 
     /**
      * Hide (not remove) this component in the DOM.
      */
     public hide(): void {
-        if (this.isRendered()) {
-            // NOTE (@romfrolov) That is opinionated.
-            // this.classList.add('hidden');
-            this.hidden = true;
-            this.visibilityState = false;
-            this.fireVisibilityChange(this.isVisible());
-        } else {
+        if (!this.isRendered()) {
             this.hideWhenRendered = true;
+            return;
         }
+
+        this.classList.add('hidden');
+        this.visibilityState = false;
+        this.fireVisibilityChange(this.isVisible());
     }
 
     /**
