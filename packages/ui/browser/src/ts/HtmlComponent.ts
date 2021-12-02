@@ -220,8 +220,21 @@ export class HtmlComponent extends HTMLElement {
      * @param tooltip The tooltip text to be displayed when hovering over this HtmlComponent.
      */
     public setTooltip(tooltip: string): void {
-        // REVIEW (@romfrolov)
         this.setAttribute('title', tooltip);
+    }
+
+    /**
+     * Attaches a listener which is invoked after a visibility change (hidden or shown).
+     */
+    public onVisibilityChange(listener: (visible: boolean) => unknown): void {
+        this.visibilityChangeListeners.add(listener);
+    }
+
+    /**
+     * Removes a visibility change listener.
+     */
+    public removeVisibilityChangeListener(listener: (visible: boolean) => unknown): void {
+        this.visibilityChangeListeners.delete(listener);
     }
 
     public isVisible(): boolean {
