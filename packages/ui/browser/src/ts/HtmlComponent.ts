@@ -4,8 +4,7 @@ import {has} from '@0cfg/utils-common/lib/has';
 import {errStatus} from '@0cfg/reply-common/lib/Reply';
 
 /**
- * Export `render` method and a template literal `html` to ensure version consistency and provide an abstraction
- * from lit-html.
+ * Export `render` method and template literals to ensure version consistency and provide an abstraction from lit-html.
  */
 export {render, html, svg};
 
@@ -26,6 +25,9 @@ export const ANIMATION_DURATION_SHORT = 100;
  */
 export const ANIMATION_DURATION_LONG = 300;
 
+/**
+ * @see https://html.spec.whatwg.org/#valid-custom-element-name
+ */
 const validateCustomElementTagName = (tagName: string) => {
     if (tagName.indexOf('-') <= 0) {
         throw new Error('You need at least 1 dash in the custom element name');
@@ -97,9 +99,9 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Triggered when this element is connected to the DOM.
+     * Invoked when this element is connected to the DOM.
      */
-    public async connectedCallback(): Promise<void> {
+    public connectedCallback(): void {
         /**
          * Ensure that the element is connected.
          *
@@ -112,17 +114,24 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Triggered when this element is disconnected from the DOM.
+     * Invoked when this element is disconnected from the DOM.
      */
     public disconnectedCallback(): void {
         // Override to handle the disconnect event.
     }
 
     /**
-     * Triggered when an atribute that we observe {@link observedAttributes} has been changed.
+     * Invoked each time the custom element is moved to a new document.
+     */
+    public adoptedCallback(): void {
+        // Override to handle the adopted event.
+    }
+
+    /**
+     * Invoked when an atribute that we observe {@link observedAttributes} has been changed.
      */
     public attributeChangedCallback(name: string, oldValue: unknown, newValue: unknown): void {
-        // Override to handle changed attribute.
+        // Override to handle a changed attribute.
     }
 
     /**
@@ -197,9 +206,8 @@ export class HtmlComponent extends HTMLElement {
      * @param tooltip The tooltip text to be displayed when hovering over this HtmlComponent.
      */
     public setTooltip(tooltip: string): void {
-        if (has(this)) {
-            this.setAttribute('title', tooltip);
-        }
+        // REVIEW (@romfrolov)
+        this.setAttribute('title', tooltip);
     }
 
     public isVisible(): boolean {
