@@ -48,7 +48,7 @@ export const customElement = (tagName: string) => (customElementClass: CustomEle
 };
 
 /**
- * Manages the lifecycle of a single custom HTML element.
+ * Manages the lifecycle of a single web component.
  */
 @injectable()
 export class HtmlComponent extends HTMLElement {
@@ -83,10 +83,9 @@ export class HtmlComponent extends HTMLElement {
     public static get observedAttributes(): string[] { return []; }
 
     /**
-     * Constructor is intended for override but no direct usage.
+     * Constructor is intended to be overriden but no direct usage.
      *
-     * The constructor should be used to set up initial state and default values, and to set up event
-     * listeners and a shadow root.
+     * The constructor should be used to set up initial state and default values.
      *
      * To read all of the requirements for custom element constructors and reactions
      * @see https://html.spec.whatwg.org/multipage/custom-elements.html#custom-element-conformance
@@ -99,46 +98,10 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Invoked when this element is connected to the DOM.
-     */
-    public connectedCallback(): void {
-        /**
-         * Ensure that the element is connected.
-         *
-         * eslint-disable-next-line
-         * @see https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#using_the_lifecycle_callbacks
-         */
-        if (!this.isConnected) return;
-
-        this._render();
-    }
-
-    /**
-     * Invoked when this element is disconnected from the DOM.
-     */
-    public disconnectedCallback(): void {
-        // Override to handle the disconnect event.
-    }
-
-    /**
-     * Invoked each time the custom element is moved to a new document.
-     */
-    public adoptedCallback(): void {
-        // Override to handle the adopted event.
-    }
-
-    /**
-     * Invoked when an atribute that we observe {@link observedAttributes} has been changed.
-     */
-    public attributeChangedCallback(name: string, oldValue: unknown, newValue: unknown): void {
-        // Override to handle a changed attribute.
-    }
-
-    /**
-     * @param fadeOut If {@code true}, the html element will get the being-destroyed class added for a short duration
+     * @param fadeOut If {@code true}, the component will get the being-destroyed class added for a short duration
      * before being removed from the DOM. The exact duration is {@link ANIMATION_DURATION_SHORT} milliseconds.
      *
-     * The method will return once the element is fully removed from the DOM.
+     * The method will return once the component is fully removed from the DOM.
      */
     public destroy(fadeOut: boolean = false): Promise<void> {
         const doDestroy: () => Promise<void> = async () => {
@@ -175,7 +138,7 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Find the first DOM element inside this component matching the {@param selector}.
+     * Find the first DOM element inside the scope of this component matching the {@param selector}.
      * If no element is found, an error is thrown.
      *
      * An error is also thrown if the HTML component is not rendered yet.
@@ -191,7 +154,7 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Find all DOM elements inside this component matching the {@param selector}
+     * Find all DOM elements inside the scope of this component matching the {@param selector}
      * If no elements are found, an empty array is returned.
      *
      * An error is thrown if the HTML component is not rendered yet.
@@ -211,11 +174,10 @@ export class HtmlComponent extends HTMLElement {
     /**
      * Sets the tooltip of this HtmlComponent.
      *
-     * Technically speaking the tooltip is the title property of the HTML
-     * element.
+     * Technically speaking the tooltip is the title property of the HTML element.
      *
-     * The element must be render to the dom first otherwise this method does
-     * nothing {@see HtmlComponent#connectedCallback}.
+     * The component must be render to the DOM first otherwise this method does nothing
+     * @see HtmlComponent#connectedCallback.
      *
      * @param tooltip The tooltip text to be displayed when hovering over this HtmlComponent.
      */
@@ -242,7 +204,7 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Show (not copy) this component in the DOM.
+     * Removes the hidden class from this component.
      */
     public show(): void {
         if (!this.isRendered()) return;
@@ -253,7 +215,7 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Hide (not remove) this component in the DOM.
+     * Adds a hidden class to this component.
      */
     public hide(): void {
         if (!this.isRendered()) {
@@ -275,7 +237,43 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Renders the HTML content of this element.
+     * Invoked when this component is connected to the DOM.
+     */
+    protected connectedCallback(): void {
+        /**
+         * Ensure that the component is connected.
+         *
+         * eslint-disable-next-line
+         * @see https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#using_the_lifecycle_callbacks
+         */
+        if (!this.isConnected) return;
+
+        this._render();
+    }
+
+    /**
+     * Invoked when this component is disconnected from the DOM.
+     */
+    protected disconnectedCallback(): void {
+        // Override to handle the disconnect event.
+    }
+
+    /**
+     * Invoked each time the component is moved to a new document.
+     */
+    protected adoptedCallback(): void {
+        // Override to handle the adopted event.
+    }
+
+    /**
+     * Invoked when an atribute that we observe {@link observedAttributes} has been changed.
+     */
+    protected attributeChangedCallback(name: string, oldValue: unknown, newValue: unknown): void {
+        // Override to handle a changed attribute.
+    }
+
+    /**
+     * Renders the HTML content of this component.
      *
      * Intended to be overridden by subclasses.
      */
@@ -340,7 +338,7 @@ export class HtmlComponent extends HTMLElement {
         }
         await this.beforeEveryRender();
 
-        // Attach HTML content of this element to the DOM.
+        // Attach HTML content of this component to the DOM.
         render(this.render(), this.shadowRoot!);
         this._updateStyles();
 
