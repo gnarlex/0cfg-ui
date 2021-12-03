@@ -127,7 +127,7 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Check whether a DOM element matching the {@param selector} exists inside of this component.
+     * Check whether a DOM element matching the {@param selector} exists inside this component.
      *
      * Always returns false if the HTML component is not rendered yet.
      */
@@ -172,7 +172,7 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Sets the tooltip of this HtmlComponent.
+     * Sets the tooltip of this component.
      *
      * Technically speaking the tooltip is the title property of the HTML element.
      *
@@ -229,8 +229,8 @@ export class HtmlComponent extends HTMLElement {
     }
 
     /**
-     * Updates the HTML content by rerendering it. Only rerenders the content of the current component, doesn't affect
-     * child components.
+     * Updates the HTML content of this component by rerendering the dynamic part of it. Only rerenders the content of
+     * the current component, doesn't affect child components.
      */
     public update(): void {
         this._render();
