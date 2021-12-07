@@ -7,6 +7,7 @@ module.exports = {
         '@storybook/addon-essentials'
     ],
     babel: async (options) => {
+        // Required for using decorators in constructors.
         options.plugins.push(require.resolve('babel-plugin-transform-typescript-metadata'));
 
         return options;
