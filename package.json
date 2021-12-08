@@ -31,10 +31,10 @@
     "packages/**/browser"
   ],
   "devDependencies": {
-    "@storybook/addon-actions": "^6.4.1",
-    "@storybook/addon-essentials": "^6.4.1",
-    "@storybook/addon-links": "^6.4.1",
-    "@storybook/web-components": "^6.4.1",
+    "@storybook/addon-actions": "^6.4.8",
+    "@storybook/addon-essentials": "^6.4.8",
+    "@storybook/addon-links": "^6.4.8",
+    "@storybook/web-components": "^6.4.8",
     "babel-plugin-transform-typescript-metadata": "0.3.2",
     "@types/jest": "^26.0.20",
     "@types/node": "^14.14.22",
