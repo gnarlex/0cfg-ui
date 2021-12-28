@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.2] - 28-12-2021
+
+### Improved
+
+- Upgraded dependencies
+
 ## [0.2.1]
 
 ### Added
@@ -50,7 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support inversify.js alongside HtmlComponents.
 
-[unreleased]: https://github.com/0cfg/0cfg-ui/compare/v0.2.1..HEAD
+[unreleased]: https://github.com/0cfg/0cfg-ui/compare/v0.2.2..HEAD
+[0.2.2]: https://github.com/0cfg/0cfg-ui/releases/tag/v0.2.2
 [0.2.1]: https://github.com/0cfg/0cfg-ui/releases/tag/v0.2.1
 [0.2.0]: https://github.com/0cfg/0cfg-ui/releases/tag/v0.2.0
 [0.1.9]: https://github.com/0cfg/0cfg-ui/releases/tag/v0.1.9
