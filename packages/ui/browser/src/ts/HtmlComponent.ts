@@ -438,7 +438,7 @@ export class HtmlComponent implements Destroyable {
      * @param visible
      */
     protected parentVisibilityChanged(visible: boolean): void {
-        this.fireVisibilityChange(visible);
+        this.fireVisibilityChange(visible && this.isVisible());
     }
 
     /**
